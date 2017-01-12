@@ -1,10 +1,10 @@
-var b = p5.board('COM6', 'arduino');
+var board = p5.board('COM6', 'arduino');
 
 // Board setup — you may need to change the port
-// var b = p5.board('/dev/cu.usbmodem1421', 'arduino');
+//var b = p5.board('/dev/cu.usbmodem1421', 'arduino');
 
 // Test servo functionality
-var servo;
+var kick, cymbol;
 var x = 0;
 // PWM Slider
 var slider, pin;
@@ -13,6 +13,52 @@ let myTimer = null;
 let ledBrightness = 0;
 
 function setup() {
+
+
+  let snareDrum = document.getElementById('snare-drum');
+  snareDrum.style.background = "url('https://image.freepik.com/free-icon/snare-drum-outline_318-41280.jpg') no-repeat";
+  snareDrum.style.height = "300px";
+  snareDrum.style.width = "400px";
+  snareDrum.style.backgroundSize = "100%";
+  snareDrum.style.display = "inline-block";
+
+
+  let cymbolDrum = document.getElementById('cymbol');
+  cymbolDrum.style.background = "url('http://coloring.thecolor.com/color/images/Hi-Hat-Cymbals.gif') no-repeat";
+  cymbolDrum.style.height = "300px";
+  cymbolDrum.style.width = "400px";
+  cymbolDrum.style.backgroundSize = "100%";
+  cymbolDrum.style.display = "inline-block";
+
+  let drumSwitch = true;
+  let cymbolSwitch = true;
+
+  snareDrum.addEventListener("click", function(){
+
+    drumSwitch = !drumSwitch;
+
+    console.log(drumSwitch);
+    if (drumSwitch){
+      kick.write(1);
+    } else {
+      kick.write(27);
+    }
+
+  });
+
+  cymbolDrum.addEventListener("click", function(){
+
+    cymbolSwitch = !cymbolSwitch;
+
+    console.log(drumSwitch);
+    if (cymbolSwitch){
+      cymbol.write(1);
+    } else {
+      cymbol.write(27);
+    }
+
+  });
+
   createCanvas(300, 200);
 
   var innerStr = '<p style="font-family:Arial;font-size:12px">'
@@ -23,16 +69,21 @@ function setup() {
 
   createDiv(innerStr);
 
-  //servo = b.pin(9, 'SERVO');
-  //servo.range([0, 360]);
+  cymbol = board.pin(9, 'SERVO');
+  cymbol.range([0, 90]);
+
+
+  kick = board.pin(10, 'SERVO');
+  kick.range([0, 90]);
+
 
   //Slider stuff
-  //slider = createSlider(0, 2000, 5000);
-  //slider.position = (10, 10);
-
-  slider = createSlider(0, 255, 150);
+  slider = createSlider(0, 2000, 5000);
   slider.position = (10, 10);
-  pin = b.pin(9, 'PWM', 'OUTPUT');
+
+  // slider = createSlider(0, 255, 150);
+  // slider.position = (10, 10);
+ //  pin = b.pin(9, 'PWM', 'OUTPUT');
 
 
 }
@@ -43,22 +94,29 @@ function draw() {
   gTimeout = slider.value();
 
    var val = slider.value();
-   console.log("DRAWING TO PIN : "+ ledBrightness)
-  pin.write(ledBrightness);
+  //  console.log("DRAWING TO PIN : "+ ledBrightness)
+   // pin.write(ledBrightness);
 
 }
 
+// Use the slider to change timeout on beats
 
 var run = setInterval(request , gTimeout); // start setInterval as "run"
 
     function request() {
 
-        console.log(gTimeout); // firebug or chrome log
         clearInterval(run); // stop the setInterval()
 
-        // console.log("YEEp");
         // Smooth drum beat
-        x%2 ? servo.write(1) :  servo.write(40)
+        // x%2 ? servo.write(1) :  servo.write(25)
+//
+        if (x%2){
+          kick.write(1)
+          cymbol.write(1)
+        } else {
+          kick.write(25)
+          cymbol.write(25)
+        }
         x++;
 
         // Jumpy drum beat
@@ -67,8 +125,7 @@ var run = setInterval(request , gTimeout); // start setInterval as "run"
         // Set a minimum timeout of 200ms
         gTimeout < 100 ? gTimeout = 100 : gTimeout = gTimeout;
 
-        console.log("gTimeout");
-        console.log(gTimeout);
+
         run = setInterval(request, gTimeout); // start the setInterval()
 
     }
@@ -76,18 +133,17 @@ var run = setInterval(request , gTimeout); // start setInterval as "run"
 
 function keyPressed() {
    if (keyCode === LEFT_ARROW) {
-     console.log('l')
-     servo.write(1);
+     cymbol.write(1);
 
    } else if (keyCode === RIGHT_ARROW) {
-     console.log('r')
-     servo.write(20);
+     cymbol.write(20);
+
    } else if (keyCode === UP_ARROW) {
-     console.log('u')
-     servo.sweep();
+     kick.write(1);
+
    } else if (keyCode === DOWN_ARROW) {
-     console.log('d')
-     servo.noSweep();
+     kick.write(25);
+
    }
 }
 
@@ -99,7 +155,7 @@ function keyPressed() {
 	audio.src = 'track1.mp3';
 	audio.controls = true;
 	audio.loop = true;
-	audio.autoplay = true;
+	audio.autoplay = false;
 
 	// Establish all variables that your Analyser will use
 	var canvas, ctx, source, context, analyser, fbc_array, bars, bar_x, bar_width, bar_height, filter;
@@ -117,8 +173,8 @@ function keyPressed() {
 		canvas = document.getElementById('analyser_render');
 		ctx = canvas.getContext('2d');
 
-		// filter.type = filter.PEAKING;
-		// filter.frequency.value = 440; // in Hertz
+		filter.type = filter.PEAKING;
+		filter.frequency.value = 440; // in Hertz
 
 		// Re-route audio playback into the processing graph of the AudioContext
 		source = context.createMediaElementSource(audio);
@@ -136,8 +192,6 @@ function keyPressed() {
 	// Looping at the default frame rate that the browser provides(approx. 60 FPS)
 	function frameLooper(){
 		window.webkitRequestAnimationFrame(frameLooper);
-
-    analyser.fftSize = 256;
 
 		fbc_array = new Uint8Array(analyser.frequencyBinCount);
 		analyser.getByteFrequencyData(fbc_array);
@@ -158,8 +212,8 @@ function keyPressed() {
 
 			let xTotal = 0;
 
-			for (var xx = 0; xx < 50; xx ++){
-				xTotal = xTotal + fbc_array[100-xx];
+			for (var xx = 0; xx < 20; xx ++){
+				xTotal = xTotal + fbc_array[xx];
 
 			}
 
@@ -167,7 +221,7 @@ function keyPressed() {
 			let xMean = 1000;
 
 			// console.log(context.sampleRate);
-			// console.log(fbc_array.length);
+			// console.log(context.sampleRate);
 
 
 			if (ledBrightness < 170){
@@ -175,16 +229,6 @@ function keyPressed() {
 							//ledBrightness = 0;
 
 			}
-			/*if (xMean < 100){
-				ledBrightness = 0;
-				ledBrightness = 1;
-			} else if (xMean > 100 && fbc_array[i] < 125){
-
-				ledBrightness = 100;
-			} else {
-				ledBrightness = 255;
-
-			} */
 
 
 		}
